@@ -1,0 +1,115 @@
+#region Service Client
+
+class PSStorageGatewayClient : AmazonStorageGatewayClient {
+
+    PSStorageGatewayClient([AWSCredentials] $Credentials, [string] $RegionName)
+    : base($Credentials,
+        (
+            New-Object AmazonStorageGatewayConfig -Property @{
+                RegionEndpoint = [RegionEndpoint]::GetBySystemName($RegionName)
+            }
+        )
+    ) {}
+
+    PSStorageGatewayClient([AWSCredentials] $Credentials, [RegionEndpoint] $Region)
+    : base($Credentials,
+        (
+            New-Object AmazonStorageGatewayConfig -Property @{
+                RegionEndpoint = $Region
+            }
+        )
+    ) {}
+
+    PSStorageGatewayClient([AWSCredentials] $Credentials, [AmazonStorageGatewayConfig] $ClientConfig)
+    : base($Credentials, $ClientConfig) {}
+
+    #### AmazonStorageGatewayClient SMB Operation Extension Methods
+    {{METHODS}}
+
+    {{GENERICMETHODS}}
+
+    hidden [MethodInfo] _initMethod([type[]] $TypeParameters) {
+        $invokeMethod = $this.GetType().GetMethod('Invoke', [BindingFlags]'NonPublic, Instance')
+
+        return $invokeMethod.MakeGenericMethod($TypeParameters)
+    }
+}
+
+#endregion Service Client
+
+#region Abstract Helper Classes
+
+#### PowerShell can only inherit multiple interfaces, if also inheriting from a base class.
+#### So We can create a base class, which inherits Interface [IMarshaller[[IRequest], [AmazonWebServiceRequest]]],
+#### and provides pseudo-abstract class behavior. Then we can derive that in our marshaller classes,
+#### while also inheriting the additional Interface, [IMarshaller[[IRequest], [<REQUEST_MODEL>]]].
+class AmazonWebServiceRequestMarshaller : IMarshaller`2[[IRequest], [AmazonWebServiceRequest]] {
+    AmazonWebServiceRequestMarshaller() {
+        $type = $this.GetType()
+        if ($type -eq [AmazonWebServiceRequestMarshaller]) {
+            throw [InvalidOperationException]::new("Abstract class [$($type)] must be inherited")
+        }
+    }
+
+    [IRequest] Marshall([AmazonWebServiceRequest] $Input) {
+        #### Get request object type from derived marshaller name
+        $requestTypeName = $this.GetType().Name -replace 'Marshaller$'
+        $type = $requestTypeName -as [type]
+        if (-not $type) {
+            throw "AmazonWebServiceRequestMarshaller exception. Details: Unable to locate type [$($requestTypeName)]"
+        }
+        $validatedInput = $Input -as $type
+        if (-not $validatedInput) {
+            throw (
+                "AmazonWebServiceRequestMarshaller Marshalling Exception. " +
+                "Details: Error while casting input, of type [$($Input.GetType())], to type [$($requestTypeName)]")
+        }
+        return $this.Marshall($validatedInput)
+    }
+}
+
+class AmazonWebServiceResponseUnmarshaller : JsonResponseUnmarshaller {
+    AmazonWebServiceResponseUnmarshaller() {
+        $type = $this.GetType()
+        if ($type -eq [AmazonWebServiceResponseUnmarshaller]) {
+            throw [InvalidOperationException]::new("Abstract class [$($type)] must be inherited")
+        }
+    }
+
+    [AmazonWebServiceResponse] Unmarshall([JsonUnmarshallerContext] $Context) {
+        throw [NotImplementedException]::new()
+    }
+
+    [AmazonServiceException] UnmarshallException(
+        [JsonUnmarshallerContext] $Context, [Exception] $InnerException, [HttpStatusCode] $StatusCode
+    ) {
+        $errorResponse = [JsonErrorResponseUnmarshaller]::GetInstance().Unmarshall($Context)
+        if ($errorResponse.Code -and $errorResponse.Code -eq 'InternalServerError') {
+            return [InternalServerErrorException]::new(
+                $errorResponse.Message,
+                $InnerException,
+                $errorResponse.Type,
+                $errorResponse.Code,
+                $errorResponse.RequestId, $StatusCode)
+        }
+
+        if ($errorResponse.Code -and $errorResponse.Code -eq 'InvalidGatewayRequestException') {
+            return [InvalidGatewayRequestException]::new(
+                $errorResponse.Message,
+                $InnerException,
+                $errorResponse.Type,
+                $errorResponse.Code,
+                $errorResponse.RequestId, $StatusCode)
+        }
+
+        return [AmazonStorageGatewayException]::new(
+            $errorResponse.Message,
+            $InnerException,
+            $errorResponse.Type,
+            $errorResponse.Code,
+            $errorResponse.RequestId, $StatusCode)
+    }
+}
+
+#endregion Abstract Helper Classes
+

@@ -1,0 +1,19 @@
+class {{OPERATION}}Unmarshaller : AmazonWebServiceResponseUnmarshaller {
+    [AmazonWebServiceResponse] Unmarshall([JsonUnmarshallerContext] $Context) {
+        $response = [{{OPERATION}}]::new()
+        [void]$Context.Read()
+        $targetDepth = $Context.CurrentDepth
+        while ($Context.ReadAtDepth($targetDepth)) {
+            {{PROPERTIES}}
+        }
+
+        return $response
+    }
+
+    hidden static [{{OPERATION}}Unmarshaller] $_instance = [{{OPERATION}}Unmarshaller]::new()
+
+    static [{{OPERATION}}Unmarshaller] GetInstance() {
+        return [{{OPERATION}}Unmarshaller]::_instance
+    }
+}
+

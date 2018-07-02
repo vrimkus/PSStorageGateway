@@ -1,0 +1,28 @@
+#### Abstract base classer for implementing multiple interfaces in PowerShell
+class {{CLASSNAME}}UnmarshallerBase : IUnmarshaller`2[[{{CLASSNAME}}], [XmlUnmarshallerContext]] {
+    [{{CLASSNAME}}] Unmarshall([XmlUnmarshallerContext] $Context) {
+        throw [NotImplementedException]::new()
+    }
+}
+
+class {{CLASSNAME}}Unmarshaller : {{CLASSNAME}}UnmarshallerBase, IUnmarshaller`2[[{{CLASSNAME}}], [JsonUnmarshallerContext]] {
+    [{{CLASSNAME}}] Unmarshall([JsonUnmarshallerContext] $Context) {
+        $Context.Read()
+        if ($Context.CurrentTokenType -eq [JsonToken]::Null) {
+            return [{{CLASSNAME}}] $null
+        }
+
+        $response = [{{CLASSNAME}}]::new()
+        $targetDepth = $Context.CurrentDepth
+        while ($Context.ReadAtDepth($targetDepth)) {
+            {{PROPERTIES}}
+        }
+        return $response
+    }
+
+    hidden static [{{CLASSNAME}}Unmarshaller] $_instance = [{{CLASSNAME}}Unmarshaller]::new()
+
+    static [{{CLASSNAME}}Unmarshaller] GetInstance() {
+        return [{{CLASSNAME}}Unmarshaller]::_instance
+    }
+}

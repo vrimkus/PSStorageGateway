@@ -1,0 +1,39 @@
+class {{OPERATION}}RequestMarshaller : AmazonWebServiceRequestMarshaller, IMarshaller`2[[IRequest], [{{OPERATION}}Request]] {
+    [IRequest] Marshall([{{OPERATION}}Request] $PublicRequest) {
+        [IRequest] $request = [DefaultRequest]::new($PublicRequest, 'Amazon.StorageGateway')
+        $target = 'StorageGateway_20130630.{{OPERATION}}'
+        $request.Headers['X-Amz-Target'] = $target
+        $request.Headers['Content-Type'] = 'application/x-amz-json-1.1'
+        $request.HttpMethod = 'POST'
+
+        $uriResourcePath = '/'
+        $request.ResourcePath = $uriResourcePath
+
+        [StringWriter] $stringWriter = $null
+        try {
+            $stringWriter = [StringWriter]::new([CultureInfo]::InvariantCulture)
+            $writer = [JsonWriter]::new($stringWriter)
+            $writer.WriteObjectStart()
+            $context = [JsonMarshallerContext]::new($request, $writer)
+
+            {{PROPERTIES}}
+
+            $writer.WriteObjectEnd()
+            $snippet = $stringWriter.ToString()
+            $request.Content = [System.Text.Encoding]::UTF8.GetBytes($snippet)
+        } finally {
+            if ($stringWriter -is [StringWriter]) {
+                $stringWriter.Dispose()
+            }
+        }
+
+        return $request
+    }
+
+    hidden static [{{OPERATION}}RequestMarshaller] $_instance = [{{OPERATION}}RequestMarshaller]::new()
+
+    static [{{OPERATION}}RequestMarshaller] GetInstance() {
+        return [{{OPERATION}}RequestMarshaller]::_instance
+    }
+}
+
